@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажер: Меры величины</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #6c5ce7;
+            margin-top: 0;
+            font-size: 24px;
+        }
+        .modes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background-color: #6c8cff;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #5a75d6;
+        }
+        button.active {
+            background-color: #6c5ce7;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.3);
+        }
+        .game-area {
+            display: none;
+        }
+        .question {
+            font-size: 22px;
+            margin: 20px 0;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            font-size: 18px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        input[type="text"]:focus {
+            border-color: #6c5ce7;
+            outline: none;
+        }
+        .result {
+            font-size: 18px;
+            font-weight: bold;
+            height: 25px;
+            margin-bottom: 15px;
+        }
+        .correct { color: #00b894; }
+        .incorrect { color: #d63031; }
+        .score {
+            font-size: 16px;
+            color: #636e72;
+        }
+        .back-btn {
+            background-color: #b2bec3;
+            margin-top: 15px;
+            font-size: 14px;
+            padding: 8px 15px;
+        }
+        .back-btn:hover { background-color: #95a5a6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Меры величины</h1>
+    
+    <div id="menu-screen">
+        <p>Выберите категорию для тренировки:</p>
+        <div class="modes">
+            <button onclick="startGame('length', this)">Меры длины</button>
+            <button onclick="startGame('time', this)">Меры времени</button>
+            <button onclick="startGame('mass', this)">Меры массы</button>
+            <button onclick="startGame('area', this)">Меры площади</button>
+            <button onclick="startGame('all', this)" style="grid-column: span 2; background-color: #00b894;">Все сразу (Микс)</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="game-area">
+        <div class="score" id="score-display">Верно: 0 | Ошибок: 0</div>
+        <div class="question" id="question-text">Загрузка...</div>
+        
+        <input type="text" id="answer-input" placeholder="Введите число" onkeypress="handleKeyPress(event)">
+        <br>
+        <button onclick="checkAnswer()" id="check-btn">Проверить</button>
+        
+        <div class="result" id="result-text"></div>
+        <button class="back-btn" onclick="backToMenu()">← В меню</button>
+    </div>
+</div>
+
+<script>
+    // Базовые правила перевода (коэффициенты)
+    const rules = {
+        length: [
+            { big: "км", small: "м", factor: 1000 },
+            { big: "м", small: "дм", factor: 10 },
+            { big: "дм", small: "см", factor: 10 },
+            { big: "см", small: "мм", factor: 10 }
+        ],
+        time: [
+            { big: "нед", small: "сут", factor: 7 },
+            { big: "сут", small: "ч", factor: 24 },
+            { big: "ч", small: "мин", factor: 60 },
+            { big: "мин", small: "сек", factor: 60 }
+        ],
+        mass: [
+            { big: "т", small: "кг", factor: 1000 },
+            { big: "т", small: "ц", factor: 10 },
+            { big: "ц", small: "кг", factor: 100 },
+            { big: "кг", small: "гр", factor: 1000 }
+        ],
+        area: [
+            { big: "км²", small: "м²", factor: 1000000 },
+            { big: "м²", small: "дм²", factor: 100 },
+            { big: "дм²", small: "см²", factor: 100 },
+            { big: "см²", small: "мм²", factor: 100 },
+            { big: "га", small: "а", factor: 100 },
+            { big: "а", small: "м²", factor: 100 }
+        ]
+    };
+
+    // Массив простых чисел для генерации примеров (чтобы не было дробей)
+    const multipliers = [1, 2, 3, 4, 5, 10, 15, 20, 50, 100];
+
+    let currentMode = '';
+    let currentAnswer = 0;
+    let score = 0;
+    let mistakes = 0;
+
+    function startGame(mode, btn) {
+        document.querySelectorAll('.modes button').forEach(b => b.classList.remove('active'));
+        if(btn) btn.classList.add('active');
+
+        currentMode = mode;
+        score = 0;
+        mistakes = 0;
+        updateScore();
+
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        let pool = [];
+        if (currentMode === 'all') {
+            for (let key in rules) pool = pool.concat(rules[key]);
+        } else {
+            pool = rules[currentMode];
+        }
+
+        // 1. Выбираем случайное правило
+        const rule = pool[Math.floor(Math.random() * pool.length)];
+        
+        // 2. Выбираем случайный множитель (от 1 до 100)
+        const mult = multipliers[Math.floor(Math.random() * multipliers.length)];
+        
+        // 3. Определяем направление: 0 - прямое (1 км = ? м), 1 - обратное (? км = 1000 м)
+        const isReverse = Math.random() < 0.5;
+
+        let questionText = "";
+        if (!isReverse) {
+            // Прямая задача: Умножаем
+            questionText = `${mult} ${rule.big} = ? ${rule.small}`;
+            currentAnswer = mult * rule.factor;
+        } else {
+            // Обратная задача: Делим
+            const smallValue = mult * rule.factor;
+            questionText = `? ${rule.big} = ${smallValue} ${rule.small}`;
+            currentAnswer = mult;
+        }
+
+        document.getElementById('question-text').innerText = questionText;
+        
+        const input = document.getElementById('answer-input');
+        input.value = '';
+        input.focus();
+        input.disabled = false;
+        document.getElementById('check-btn').disabled = false;
+        document.getElementById('result-text').innerText = '';
+        document.getElementById('result-text').className = 'result';
+    }
+
+    function checkAnswer() {
+        const input = document.getElementById('answer-input');
+        const userAnswer = input.value.trim().replace(',', '.').replace(/\s/g, '');
+        const resultText = document.getElementById('result-text');
+
+        if (userAnswer === '') return;
+
+        if (parseFloat(userAnswer) === currentAnswer) {
+            resultText.innerText = "✅ Верно!";
+            resultText.className = "result correct";
+            score++;
+        } else {
+            // Форматируем ответ, чтобы большие числа было легко читать
+            const formattedAnswer = currentAnswer.toLocaleString('ru-RU');
+            resultText.innerText = `❌ Ошибка. Правильно: ${formattedAnswer}`;
+            resultText.className = "result incorrect";
+            mistakes++;
+        }
+
+        updateScore();
+        
+        input.disabled = true;
+        document.getElementById('check-btn').disabled = true;
+        
+        setTimeout(nextQuestion, 1800); 
+    }
+
+    function updateScore() {
+        document.getElementById('score-display').innerText = `Верно: ${score} | Ошибок: ${mistakes}`;
+    }
+
+    function handleKeyPress(e) {
+        if (e.key === 'Enter') checkAnswer();
+    }
+
+    function backToMenu() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'block';
+        document.querySelectorAll('.modes button').forEach(b => b.classList.remove('active'));
+    }
+</script>
+
+</body>
+</html>
