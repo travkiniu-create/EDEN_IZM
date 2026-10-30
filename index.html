@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Тренажер: Меры величины</title>
+    <style>
+        /* Переменные */
+        :root {
+            --bg-dark: #0d1117;
+            --bg-panel: #161b22;
+            --bg-element: #21262d;
+            --bg-hover: #30363d;
+            --border: #30363d;
+            --text-main: #c9d1d9;
+            --text-muted: #8b949e;
+            --text-link: #58a6ff;
+            --btn-green: #238636;
+            --btn-green-hover: #2ea043;
+            --success: #2ea043;
+            --error: #f85149;
+            --accent-blue: #1f6feb;
+            --gold: #e3b341;
+        }
+
+        /* Сброс и база */
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            line-height: 1.5;
+            touch-action: pan-y;
+            overflow-x: hidden;
+        }
+        button {
+            background-color: var(--bg-element);
+            color: var(--text-main);
+            border: 1px solid rgba(240,246,252,0.1);
+            border-radius: 6px;
+            padding: 10px 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            font-family: inherit;
+            text-align: center;
+            touch-action: pan-y;
+            user-select: none;
+        }
+        button:hover { background-color: var(--bg-hover); }
+
+        /* Контейнер */
+        .container {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Шапка */
+        .header {
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .header-left { display: flex; align-items: center; gap: 10px; }
+        .header h1 { font-size: 18px; font-weight: 600; margin: 0; color: #fff; }
+        .header svg { fill: var(--text-muted); width: 18px; height: 18px; }
+        .high-score-display {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gold);
+            background-color: rgba(227, 179, 65, 0.1);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(227, 179, 65, 0.3);
+        }
+
+        /* Меню */
+        .menu-text { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+        .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .mode-btn.active { background-color: var(--accent-blue); border-color: var(--accent-blue); color: #fff; }
+        .start-btn { background-color: var(--btn-green); border: 1px solid rgba(240,246,252,0.1); color: #fff; width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border-radius: 6px; margin-top: 10px; }
+        .start-btn:hover { background-color: var(--btn-green-hover); }
+        .start-btn:disabled { opacity: 0.5; cursor: not-allowed; background-color: var(--bg-element); color: var(--text-muted); }
+
+        /* Игра */
+        .game-area { display: none; }
+        .score-panel { display: flex; justify-content: center; gap: 15px; margin-top: 15px; margin-bottom: 5px; font-size: 16px; font-weight: 600; }
+        .score-panel .correct-count { color: var(--success); }
+        .score-panel .mistake-count { color: var(--error); }
+        .score-panel .points-count { color: var(--accent-blue); }
+        .result { font-size: 22px; font-weight: bold; min-height: 32px; margin-bottom: 10px; text-align: center; display: flex; align-items: center; justify-content: center; }
+        .result.correct { color: var(--success); }
+        .result.incorrect { color: var(--error); }
+        .question {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 10px 0 20px 0;
+            min-height: 45px;
+            text-align: center;
+            color: #fff;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+        }
+
+        /* Дисплей и клавиатура */
+        .display {
+            width: 100%;
+            padding: 12px;
+            font-size: 24px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: #fff;
+            text-align: right;
+            margin-bottom: 12px;
+            font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+            min-height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .display::after { content: '|'; color: var(--text-muted); animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 15px; }
+        .keypad button { padding: 8px 0; font-size: 28px; font-weight: 600; border-radius: 6px; background-color: var(--bg-element); color: #fff; border: 1px solid var(--border); }
+        .keypad button:active { background-color: var(--bg-hover); }
+        .keypad .clear-btn { color: var(--error); font-size: 24px; }
+        .keypad .backspace-btn { color: var(--text-link); font-size: 24px; }
+        .keypad .comma-btn { color: var(--success); font-size: 28px; }
+
+        .check-btn { background-color: var(--btn-green); border: 2px solid rgba(240,246,252,0.15); color: #fff; width: 100%; padding: 18px; font-size: 20px; font-weight: 700; border-radius: 8px; letter-spacing: 0.5px; }
+        .check-btn:hover { background-color: var(--btn-green-hover); }
+        .check-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .back-btn { background-color: transparent; border: none; color: var(--text-link); padding: 0; margin-top: 15px; font-size: 14px; display: block; margin-left: auto; margin-right: auto; }
+        .back-btn:hover { text-decoration: underline; background-color: transparent; }
+
+        /* Анимация и гусь */
+        @keyframes flash-red {
+            0% { background-color: rgba(248, 81, 73, 0.4); border-color: var(--error); }
+            100% { background-color: var(--bg-panel); border-color: var(--border); }
+        }
+        .flash-error { animation: flash-red 0.6s ease-out; }
+
+        #bg-flash {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #goose-container {
+            position: fixed;
+            top: 5vh;
+            left: 50%;
+            transform: translateX(-50%) scale(1.3);
+            transform-origin: top center;
+            width: 120px;
+            height: 120px;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+            opacity: 0;
+        }
+        @keyframes goose-pop-top {
+            0% { transform: translate(-50%, -50px) scale(0.8); opacity: 0; }
+            20% { transform: translate(-50%, 10px) scale(1.4); opacity: 1; }
+            40% { transform: translate(-50%, 0) scale(1.3); }
+            80% { transform: translate(-50%, 0) scale(1.3); opacity: 1; }
+            100% { transform: translate(-50%, -30px) scale(1.1); opacity: 0; }
+        }
+        .goose-animate { display: block !important; animation: goose-pop-top 1.5s ease-out forwards; }
+
+        .pixel-goose { position: relative; width: 100%; height: 100%; transform: scale(1.5); transform-origin: top center; }
+        .pixel { position: absolute; background-color: #fff; }
+
+        /* Гусь: части */
+        .p-body { width: 16px; height: 16px; bottom: 0; right: 0; }
+        .p-body2 { width: 16px; height: 16px; bottom: 0; right: 16px; }
+        .p-body3 { width: 16px; height: 16px; bottom: 16px; right: 16px; }
+        .p-body4 { width: 16px; height: 16px; bottom: 16px; right: 32px; }
+        .p-body5 { width: 16px; height: 16px; bottom: 32px; right: 32px; }
+        .p-neck { width: 16px; height: 16px; bottom: 32px; right: 16px; }
+        .p-head { width: 16px; height: 16px; bottom: 48px; right: 16px; }
+        .p-head2 { width: 16px; height: 16px; bottom: 48px; right: 32px; }
+        .p-beak { width: 16px; height: 16px; bottom: 48px; right: 0; background-color: #f0883e; }
+        .p-beak2 { width: 16px; height: 16px; bottom: 32px; right: 0; background-color: #f0883e; }
+        .p-eye { width: 4px; height: 4px; bottom: 56px; right: 20px; background-color: #000; z-index: 2; }
+        .p-wing { width: 16px; height: 16px; bottom: 16px; right: 0; background-color: #8b949e; }
+        .p-leg1 { width: 4px; height: 8px; bottom: -8px; right: 4px; background-color: #f0883e; }
+        .p-leg2 { width: 4px; height: 8px; bottom: -8px; right: 24px; background-color: #f0883e; }
+
+        .p-happy { width: 16px; height: 16px; top: -20px; right: 20px; background: transparent; border: 4px solid var(--success); border-radius: 50%; display: none; }
+        .p-angry { width: 16px; height: 16px; top: -20px; right: 20px; display: none; position: relative; }
+        .p-angry::before, .p-angry::after { content: ''; position: absolute; width: 16px; height: 4px; background: var(--error); top: 6px; left: 0; }
+        .p-angry::before { transform: rotate(45deg); }
+        .p-angry::after { transform: rotate(-45deg); }
+        .p-brow { width: 8px; height: 4px; bottom: 60px; right: 24px; background: #000; transform: rotate(20deg); display: none; z-index: 2; }
+    </style>
+</head>
+<body>
+
+<!-- Фоновый слой -->
+<div id="bg-flash"></div>
+
+<!-- Гусь -->
+<div id="goose-container">
+    <div class="pixel-goose">
+        <div class="pixel p-body"></div><div class="pixel p-body2"></div><div class="pixel p-body3"></div>
+        <div class="pixel p-body4"></div><div class="pixel p-body5"></div>
+        <div class="pixel p-neck"></div><div class="pixel p-head"></div><div class="pixel p-head2"></div>
+        <div class="pixel p-beak"></div><div class="pixel p-beak2"></div>
+        <div class="pixel p-eye"></div><div class="pixel p-brow" id="goose-brow"></div>
+        <div class="pixel p-wing"></div><div class="pixel p-leg1"></div><div class="pixel p-leg2"></div>
+        <div class="pixel p-happy" id="goose-happy"></div>
+        <div class="pixel p-angry" id="goose-angry"></div>
+    </div>
+</div>
+
+<div class="container" id="main-container">
+    <div class="header">
+        <div class="header-left">
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path fill-rule="evenodd" d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"></path>
+            </svg>
+            <h1>Меры величины</h1>
+        </div>
+        <div class="high-score-display" id="high-score">Рекорд: 0</div>
+    </div>
+    
+    <!-- Меню -->
+    <div id="menu-screen">
+        <div class="menu-text">Выберите нужные темы:</div>
+        <div class="modes" id="modes-container">
+            <!-- Кнопки генерируются в JS -->
+        </div>
+        <button class="start-btn" id="start-btn" onclick="startGame()">Начать тренировку</button>
+    </div>
+
+    <!-- Игра -->
+    <div id="game-screen" class="game-area">
+        <div class="result" id="result-text"></div>
+        <div class="question" id="question-text">Загрузка...</div>
+        <div class="display" id="display"></div>
+        
+        <div class="keypad" id="keypad">
+            <!-- Кнопки генерируются в JS -->
+        </div>
+
+        <button class="check-btn" onclick="checkAnswer()" id="check-btn">Проверить</button>
+        
+        <div class="score-panel" id="score-display">
+            <span class="correct-count">Верно: 0</span>
+            <span class="mistake-count">Ошибок: 0</span>
+            <span class="points-count">Очки: 0</span>
+        </div>
+        
+        <button class="back-btn" onclick="backToMenu()">← Вернуться в меню</button>
+    </div>
+</div>
+
+<script>
+    // --- ДАННЫЕ ---
+    const RULES = {
+        time: [
+            { big: "мин", small: "с", factor: 60 },
+            { big: "ч", small: "мин", factor: 60 },
+            { big: "сут", small: "ч", factor: 24 },
+            { big: "нед", small: "сут", factor: 7 }
+        ],
+        length: [
+            { big: "см", small: "мм", factor: 10 },
+            { big: "дм", small: "см", factor: 10 },
+            { big: "м", small: "дм", factor: 10 },
+            { big: "м", small: "см", factor: 100 },
+            { big: "км", small: "м", factor: 1000 }
+        ],
+        mass: [
+            { big: "г", small: "мг", factor: 1000 },
+            { big: "кг", small: "г", factor: 1000 },
+            { big: "ц", small: "кг", factor: 100 },
+            { big: "т", small: "кг", factor: 1000 }
+        ],
+        speed: [
+            { big: "м/с", small: "км/ч", factor: 3.6 },
+            { big: "км/ч", small: "м/с", factor: 0.28 }
+        ],
+        area: [
+            { big: "см²", small: "мм²", factor: 100 },
+            { big: "дм²", small: "см²", factor: 100 },
+            { big: "м²", small: "дм²", factor: 100 },
+            { big: "м²", small: "см²", factor: 10000 },
+            { big: "км²", small: "м²", factor: 1000000 },
+            { big: "га", small: "м²", factor: 10000 }
+        ],
+        volume: [
+            { big: "см³", small: "мм³", factor: 1000 },
+            { big: "дм³", small: "см³", factor: 1000 },
+            { big: "м³", small: "дм³", factor: 1000 },
+            { big: "м³", small: "см³", factor: 1000000 },
+            { big: "км³", small: "м³", factor: 1000000000 },
+            { big: "л", small: "дм³", factor: 1 },
+            { big: "л", small: "мл", factor: 1000 },
+            { big: "мл", small: "см³", factor: 1 }
+        ]
+    };
+
+    const MODES_LABELS = { time: "Время", length: "Длина", mass: "Масса", speed: "Скорость", area: "Площадь", volume: "Объём" };
+    const MULTIPLIERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const KEYPAD_BUTTONS = [
+        '7', '8', '9', '4', '5', '6', '1', '2', '3', 'C', '0', '⌫'
+    ];
+
+    // --- СОСТОЯНИЕ ---
+    let activeModes = [];
+    let currentAnswer = 0;
+    let score = 0, mistakes = 0, points = 0, highScore = 0;
+    let inputString = '';
+
+    // --- ИНИЦИАЛИЗАЦИЯ UI ---
+    function initUI() {
+        // Генерация кнопок меню
+        const modesContainer = document.getElementById('modes-container');
+        Object.keys(RULES).forEach(mode => {
+            const btn = document.createElement('button');
+            btn.className = 'mode-btn active';
+            btn.dataset.mode = mode;
+            btn.textContent = MODES_LABELS[mode];
+            btn.onclick = function() { toggleMode(this); };
+            modesContainer.appendChild(btn);
+        });
+
+        // Генерация клавиатуры
+        const keypad = document.getElementById('keypad');
+        KEYPAD_BUTTONS.forEach(val => {
+            const btn = document.createElement('button');
+            btn.textContent = val;
+            if (val === 'C') btn.className = 'clear-btn';
+            if (val === '⌫') btn.className = 'backspace-btn';
+            btn.onclick = () => {
+                if (val === 'C') clearInput();
+                else if (val === '⌫') backspace();
+                else inputDigit(val);
+            };
+            keypad.appendChild(btn);
+        });
+        
+        // Добавляем запятую отдельно (на всю ширину)
+        const commaBtn = document.createElement('button');
+        commaBtn.className = 'comma-btn';
+        commaBtn.textContent = ',';
+        commaBtn.style.gridColumn = 'span 3';
+        commaBtn.onclick = () => inputDigit(',');
+        keypad.appendChild(commaBtn);
+
+        // Загрузка рекорда
+        const savedHighScore = localStorage.getItem('mathTrainerHighScore');
+        if (savedHighScore) {
+            highScore = parseInt(savedHighScore, 10);
+            document.getElementById('high-score').innerText = `Рекорд: ${highScore}`;
+        }
+    }
+
+    // --- ЛОГИКА ---
+    function toggleMode(btn) {
+        btn.classList.toggle('active');
+        checkStartButton();
+    }
+
+    function checkStartButton() {
+        const activeBtns = document.querySelectorAll('.mode-btn.active');
+        document.getElementById('start-btn').disabled = activeBtns.length === 0;
+    }
+
+    function startGame() {
+        activeModes = Array.from(document.querySelectorAll('.mode-btn.active')).map(btn => btn.dataset.mode);
+        score = 0; mistakes = 0; points = 0;
+        updateScore();
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('game-screen').style.display = 'block';
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        // Сбор пула вопросов
+        const pool = activeModes.flatMap(mode => RULES[mode]);
+        const rule = pool[Math.floor(Math.random() * pool.length)];
+        const isReverse = Math.random() < 0.5;
+        
+        // Подбор множителя
+        let mult;
+        if (rule.big === "м/с" || rule.big === "км/ч") {
+            mult = [1, 10, 36][Math.floor(Math.random() * 3)];
+        } else if (rule.factor >= 1000) {
+            mult = [1, 2, 3, 4, 5][Math.floor(Math.random() * 5)];
+        } else {
+            mult = MULTIPLIERS[Math.floor(Math.random() * MULTIPLIERS.length)];
+        }
+
+        // Формирование вопроса
+        let questionText;
+        if (!isReverse) {
+            questionText = `${mult} ${rule.big} = ? ${rule.small}`;
+            currentAnswer = mult * rule.factor;
+        } else {
+            const smallValue = mult * rule.factor;
+            questionText = `? ${rule.big} = ${smallValue.toLocaleString('ru-RU')} ${rule.small}`;
+            currentAnswer = mult;
+        }
+        currentAnswer = Math.round(currentAnswer * 100) / 100;
+        
+        // Обновление UI
+        document.getElementById('question-text').innerText = questionText;
+        inputString = '';
+        updateDisplay();
+        document.getElementById('check-btn').disabled = false;
+        document.getElementById('result-text').innerText = '';
+        document.getElementById('result-text').className = 'result';
+        
+        // Скрытие гуся
+        const goose = document.getElementById('goose-container');
+        goose.classList.remove('goose-animate');
+        goose.style.display = 'none';
+    }
+
+    // --- ВВОД ---
+    function inputDigit(digit) {
+        const resultText = document.getElementById('result-text');
+        if (resultText.innerText !== '') {
+            resultText.innerText = '';
+            resultText.className = 'result';
+        }
+        if (digit === ',' && inputString.includes(',')) return;
+        if (digit === ',' && inputString === '') return;
+        if (inputString.length < 12) {
+            inputString += digit;
+            updateDisplay();
+        }
+    }
+
+    function clearInput() { inputString = ''; updateDisplay(); }
+    function backspace() { inputString = inputString.slice(0, -1); updateDisplay(); }
+
+    function updateDisplay() {
+        const display = document.getElementById('display');
+        if (!inputString) { display.innerText = ''; return; }
+        const parts = inputString.split(',');
+        const formattedInt = parts[0] ? parseInt(parts[0], 10).toLocaleString('ru-RU') : '';
+        display.innerText = parts.length > 1 ? `${formattedInt},${parts[1]}` : formattedInt;
+    }
+
+    // --- ПРОВЕРКА ОТВЕТА ---
+    function checkAnswer() {
+        if (inputString === '') return;
+        const resultText = document.getElementById('result-text');
+        const userAnswer = parseFloat(inputString.replace(',', '.'));
+        const isCorrect = Math.abs(userAnswer - currentAnswer) < 0.1;
+
+        if (isCorrect) {
+            resultText.innerText = "✅ Верно!";
+            resultText.className = "result correct";
+            score++; points += 10;
+        } else {
+            const formattedAnswer = currentAnswer.toLocaleString('ru-RU');
+            resultText.innerText = `❌ Ошибка. Правильно: ${formattedAnswer}`;
+            resultText.className = "result incorrect";
+            mistakes++;
+            points = Math.max(0, points - 5);
+        }
+
+        triggerAnimation(isCorrect);
+        updateScore();
+        checkHighScore();
+        
+        document.getElementById('check-btn').disabled = true;
+        setTimeout(nextQuestion, 1800);
+    }
+
+    // --- АНИМАЦИЯ ---
+    function triggerAnimation(isCorrect) {
+        const container = document.getElementById('main-container');
+        const bgFlash = document.getElementById('bg-flash');
+        const goose = document.getElementById('goose-container');
+        
+        container.classList.remove('flash-error');
+        bgFlash.style.opacity = '0';
+        goose.classList.remove('goose-animate');
+        void container.offsetWidth; 
+        void goose.offsetWidth;
+
+        const happy = document.getElementById('goose-happy');
+        const angry = document.getElementById('goose-angry');
+        const brow = document.getElementById('goose-brow');
+
+        if (isCorrect) {
+            bgFlash.style.backgroundColor = 'rgba(46, 160, 67, 0.15)';
+            happy.style.display = 'block';
+            angry.style.display = 'none';
+            brow.style.display = 'none';
+            if (navigator.vibrate) navigator.vibrate(50);
+        } else {
+            container.classList.add('flash-error');
+            bgFlash.style.backgroundColor = 'rgba(248, 81, 73, 0.15)';
+            happy.style.display = 'none';
+            angry.style.display = 'block';
+            brow.style.display = 'block';
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        }
+
+        bgFlash.style.opacity = '1';
+        setTimeout(() => bgFlash.style.opacity = '0', 800);
+        
+        goose.style.display = 'block';
+        goose.classList.add('goose-animate');
+    }
+
+    // --- СЧЕТЧИКИ ---
+    function updateScore() {
+        document.getElementById('score-display').innerHTML = `
+            <span class="correct-count">Верно: ${score}</span>
+            <span class="mistake-count">Ошибок: ${mistakes}</span>
+            <span class="points-count">Очки: ${points}</span>
+        `;
+    }
+
+    function checkHighScore() {
+        if (points > highScore) {
+            highScore = points;
+            document.getElementById('high-score').innerText = `Рекорд: ${highScore}`;
+            localStorage.setItem('mathTrainerHighScore', highScore);
+        }
+    }
+
+    function backToMenu() {
+        document.getElementById('game-screen').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'block';
+    }
+
+    // --- СТАРТ ---
+    window.onload = initUI;
+</script>
+
+</body>
+</html>
